@@ -1,39 +1,40 @@
-$( function() {
+$(function () {
     'use strict';
-    var action = mw.config.get( 'wgAction' );
-    if ( action !== 'edit' ) return;
+    var action = mw.config.get('wgAction');
 
-    var $summaryWrapper = $( '#wpSummaryLabel' ).find( '.oo-ui-fieldLayout-field' );
-    var $summary = $summaryWrapper.find( '#wpSummary' );
+    if (action !== 'edit' && action !== 'submit') return;
+
+    var $summaryWrapper = $('#wpSummaryLabel').find('.oo-ui-fieldLayout-field');
+    var $summary        = $summaryWrapper.find('#wpSummary');
     var $rlg;
-    var defaultFormat = '[[:en:Special:PermanentLink/$1|en:$1]]';
-    var lsFormat = localStorage.getItem( 'gadget-rlg-format' );
-    var clsActive = 'rlg-active';
+    var defaultFormat   = '[[:en:Special:PermanentLink/$1|en:$1]]';
+    var lsFormat        = localStorage.getItem('gadget-rlg-format');
+    var clsActive       = 'rlg-active';
 
     var i18n = {
-        text: {
-            revisionID: '版ID',
-            insLink: '生成',
-            format: '生成形式',
-            formatNote: '（$1が版ID）',
-            reset: 'リセット',
-            getFromEnglish: '版IDを英語版ページから取得',
-            getID: '取得',
-            getting: '取得中…',
+        text       : {
+            revisionID        : '版ID',
+            insLink           : '生成',
+            format            : '生成形式',
+            formatNote        : '（$1が版ID）',
+            reset             : 'リセット',
+            getFromEnglish    : '版IDを英語版ページから取得',
+            getID             : '取得',
+            getting           : '取得中…',
             insCurrentPagename: '現在のページ名',
-            closePanel: '閉じる',
-            errorCouldntGet: '取得できませんでした'
+            closePanel        : '閉じる',
+            errorCouldntGet   : '取得できませんでした'
         },
         placeholder: {
-            enterRevisionID: '版IDを入力',
-            enterFormat: '生成形式を入力',
+            enterRevisionID     : '版IDを入力',
+            enterFormat         : '生成形式を入力',
             enterEnglishPagename: 'ページ名を入力'
         },
-        title: {
-            insLink: '入力した版IDを生成形式のとおり、要約欄での現在のカーソル位置に出力します。',
-            format: 'ここに入力している形式で版IDが出力されます。\n空欄の場合は、版IDのみが出力されます。',
-            resetFormat: '形式をデフォルトにリセットします。',
-            getID: '入力した英語版のページから版IDを取得します。',
+        title      : {
+            insLink           : '入力した版IDを生成形式のとおり、要約欄での現在のカーソル位置に出力します。',
+            format            : 'ここに入力している形式で版IDが出力されます。\n空欄の場合は、版IDのみが出力されます。',
+            resetFormat       : '形式をデフォルトにリセットします。',
+            getID             : '入力した英語版のページから版IDを取得します。',
             insCurrentPagename: '現在のページ名を入力欄に補完します。\n英語版の言語間リンクがある場合は、そちらを使用します。'
         }
     };
@@ -109,126 +110,136 @@ $( function() {
         '<div class="rlg-item actions-area"></div>',
         '</div>',
         '</div>'
-    ].join( '' );
+    ].join('');
 
-    $summaryWrapper.append( html );
-    $rlg = $( '#rlg-body' );
+    $summaryWrapper.append(html);
+    $rlg = $('#rlg-body');
 
     // Panel actions
     // Show panel when focused the summary
-    $summary.on( 'focus', showPanelWhenFocused );
+    $summary.on('focus', showPanelWhenFocused);
     // Hide panel when the close button is clicked
-    $rlg.find( 'button[name="closePanel"]' ).on( 'click', hidePanelWhenCloseIsClicked );
+    $rlg.find('button[name="closePanel"]').on('click', hidePanelWhenCloseIsClicked);
     // Hide panel when clicked anywhere except for the summary or the panel
-    $( document ).on( 'mousedown', hidePanelWhenClickedAnywhere );
+    $(document).on('mousedown', hidePanelWhenClickedAnywhere);
     // Insert permanent link string to current cursor position on the summary
-    $rlg.find( 'button[name="insLink"]' ).on( 'click', insPermanentLink );
+    $rlg.find('button[name="insLink"]').on('click', insPermanentLink);
     // Reset the format to default
-    $rlg.find( 'button[name="resetFormat"]' ).on( 'click', resetFormat );
+    $rlg.find('button[name="resetFormat"]').on('click', resetFormat);
     // Get ID from the specified English page using ajax and insert it into the revision field
-    $rlg.find( 'button[name="getID"]' ).on( 'click', getRevisionIDFromEnglish );
+    $rlg.find('button[name="getID"]').on('click', getRevisionIDFromEnglish);
     // Insert current pagename to the English pagename field
-    $rlg.find( 'button[name="insCurrentPagename"]' ).on( 'click', insCurrentPagename );
+    $rlg.find('button[name="insCurrentPagename"]').on('click', insCurrentPagename);
 
     // Allows input that only number or modifier key
-    var allowKeycode = [ 8, 46 ];
-    $rlg.find( 'input[name="revisionID"]' ).on( 'keypress', function( e ) {
+    var allowKeycode = [8, 46];
+
+    $rlg.find('input[name="revisionID"]').on('keypress', function (e) {
         var key = e.keyCode;
-        var str = String.fromCharCode( key );
-        if ( !(
-            /[0-9]/.test( str ) ||
-            ( 37 <= key && key <= 40 ) ||
-            !allowKeycode.indexOf( key )
-        ) ) {
+        var str = String.fromCharCode(key);
+
+        if (!(
+            /[0-9]/.test(str) ||
+            (37 <= key && key <= 40) ||
+            !allowKeycode.indexOf(key)
+        )) {
             return false;
         }
-    } );
+    });
 
     function showPanelWhenFocused() {
-        if ( $rlg.hasClass( clsActive ) ) return;
-        $rlg.addClass( clsActive );
+        if ($rlg.hasClass(clsActive)) return;
+
+        $rlg.addClass(clsActive);
     }
 
     function hidePanelWhenCloseIsClicked() {
-        $rlg.removeClass( clsActive );
+        $rlg.removeClass(clsActive);
     }
 
-    function hidePanelWhenClickedAnywhere( e ) {
-        var $this = $( e.target );
+    function hidePanelWhenClickedAnywhere(e) {
+        var $this = $(e.target);
+
         if (
-            !$this.closest( $rlg ).length &&
-            !$this.is( $summary ) &&
-            $rlg.hasClass( clsActive )
+            !$this.closest($rlg).length &&
+            !$this.is($summary) &&
+            $rlg.hasClass(clsActive)
         ) {
-            $rlg.removeClass( clsActive );
+            $rlg.removeClass(clsActive);
         }
     }
 
     function insPermanentLink() {
-        var elemID = $rlg.find( 'input[name="revisionID"]' ).val();
-        var elemFormat = $rlg.find( 'textarea[name="format"]' ).val();
-        if ( !elemID ) return;
+        var elemID     = $rlg.find('input[name="revisionID"]').val();
+        var elemFormat = $rlg.find('textarea[name="format"]').val();
+
+        if (!elemID) return;
 
         // Save format string to localstorage
-        localStorage.setItem( 'gadget-rlg-format', elemFormat );
+        localStorage.setItem('gadget-rlg-format', elemFormat);
 
         // RegExp replace. If the format field is empty, only insert a id
-        var result = !elemFormat ? elemID : elemID.replace( new RegExp( '(' + elemID + ')' ), elemFormat );
-        var cursorPos = $summary.get( 0 ).selectionStart;
-        $summary.val( function( _, v ) {
-            return v.substring( 0, cursorPos ) + result + v.substring( cursorPos );
-        } );
+        var result    = !elemFormat ? elemID : elemID.replace(new RegExp('(' + elemID + ')'), elemFormat);
+        var cursorPos = $summary.get(0).selectionStart;
+
+        $summary.val(function (_, v) {
+            return v.substring(0, cursorPos) + result + v.substring(cursorPos);
+        });
 
         // After insertion, focus to the summary field and set cursor position to end of inserted string
         var newCursorPos = cursorPos + result.length;
-        $summary.focus().get( 0 ).setSelectionRange( newCursorPos, newCursorPos );
+
+        $summary.focus().get(0).setSelectionRange(newCursorPos, newCursorPos);
     }
 
     function resetFormat() {
-        var $format = $rlg.find( 'textarea[name="format"]' );
-        $format.val( defaultFormat );
+        var $format = $rlg.find('textarea[name="format"]');
+
+        $format.val(defaultFormat);
     }
 
     var iwPromise; // Acquired json data for interwiki
     function getRevisionIDFromEnglish() {
-        var $getBtn = $rlg.find( 'button[name="getID"]' );
-        var elemEnPagename = $rlg.find( 'input[name="englishPage"]' ).val();
+        var $getBtn        = $rlg.find('button[name="getID"]');
+        var elemEnPagename = $rlg.find('input[name="englishPage"]').val();
 
         // Start
-        $getBtn.text( i18n.text.getting );
+        $getBtn.text(i18n.text.getting);
 
-        if ( iwPromise ) {
+        if (iwPromise) {
             iwPromise
-                .then( resolve, rejected )
+                .then(resolve, rejected)
                 // End
-                .then( function() {
-                    $getBtn.text( i18n.text.getID );
-                } );
+                .then(function () {
+                    $getBtn.text(i18n.text.getID);
+                });
         } else {
             rejected();
-            $getBtn.text( i18n.text.getID );
+            $getBtn.text(i18n.text.getID);
         }
 
-        function resolve( data ) {
-            var articleID = data.query.pageids[ 0 ];
+        function resolve(data) {
+            var articleID = data.query.pageids[0];
             var pagename;
             // If acquired English page does not exist, use current pagename for ID acquisition
-            if ( articleID === '-1' ) {
+            if (articleID === '-1') {
                 rejected();
+
                 return;
             }
 
             // Return if English pagename field is empty
-            if ( !elemEnPagename ) return;
+            if (!elemEnPagename) return;
 
-            pagename = data.query.pages[ articleID ];
+            pagename = data.query.pages[articleID];
             // If acquired json hasn't interwiki data, use current pagename
-            if ( !( 'langlinks' in pagename ) ) {
+            if (!('langlinks' in pagename)) {
                 rejected();
+
                 return;
             }
 
-            pagename = pagename.langlinks[ 0 ][ '*' ];
+            pagename = pagename.langlinks[0]['*'];
 
             // If acquired English page does not match the current English
             // pagename field, use current pagename for ID acquisition
@@ -237,96 +248,101 @@ $( function() {
                 elemEnPagename !== pagename
             ) {
                 rejected();
+
                 return;
             }
 
-            _getRevisionIdJSON( pagename );
+            _getRevisionIdJSON(pagename);
         }
 
         function rejected() {
-            if ( !elemEnPagename ) return;
+            if (!elemEnPagename) return;
 
-            _getRevisionIdJSON( elemEnPagename );
+            _getRevisionIdJSON(elemEnPagename);
         }
     }
 
     function insCurrentPagename() {
-        var $enPagename = $rlg.find( 'input[name="englishPage"]' );
-        var $insBtn = $rlg.find( 'button[name="insCurrentPagename"]' );
-        var currentPagename = mw.config.get( 'wgPageName' );
+        var $enPagename     = $rlg.find('input[name="englishPage"]');
+        var $insBtn         = $rlg.find('button[name="insCurrentPagename"]');
+        var currentPagename = mw.config.get('wgPageName');
         var enPagename;
-        iwPromise = getEnInterwiki();
+        iwPromise           = getEnInterwiki();
 
         // Start
-        $insBtn.text( i18n.text.getting );
+        $insBtn.text(i18n.text.getting);
 
         iwPromise
-            .then( resolve, rejected )
+            .then(resolve, rejected)
             // End
-            .then( function() {
-                $insBtn.text( i18n.text.insCurrentPagename );
-            } );
+            .then(function () {
+                $insBtn.text(i18n.text.insCurrentPagename);
+            });
 
         function getEnInterwiki() {
             var api = new mw.Api();
-            return api.get( {
-                action: 'query',
-                format: 'json',
-                prop: 'langlinks',
+
+            return api.get({
+                action      : 'query',
+                format      : 'json',
+                prop        : 'langlinks',
                 indexpageids: '1',
-                titles: currentPagename,
-                lllang: 'en'
-            } );
+                titles      : currentPagename,
+                lllang      : 'en'
+            });
         }
 
-        function resolve( data ) {
-            var articleID = data.query.pageids[ 0 ];
-            if ( articleID === '-1' ) {
+        function resolve(data) {
+            var articleID = data.query.pageids[0];
+            if (articleID === '-1') {
                 rejected();
+
                 return;
             }
 
-            enPagename = data.query.pages[ articleID ];
-            if ( !( 'langlinks' in enPagename ) ) {
+            enPagename = data.query.pages[articleID];
+            if (!('langlinks' in enPagename)) {
                 rejected();
+
                 return;
             }
 
-            $enPagename.val( enPagename.langlinks[ 0 ][ '*' ] );
+            $enPagename.val(enPagename.langlinks[0]['*']);
         }
 
         function rejected() {
-            var namespace = mw.config.get( 'wgCanonicalNamespace' );
-            var title = mw.config.get( 'wgTitle' );
-            enPagename = ( namespace ? namespace + ':' : '' ) + title;
-            $enPagename.val( enPagename );
+            var namespace = mw.config.get('wgCanonicalNamespace');
+            var title     = mw.config.get('wgTitle');
+            enPagename    = (namespace ? namespace + ':' : '') + title;
+            $enPagename.val(enPagename);
         }
     }
 
-    function _getRevisionIdJSON( pagename ) {
+    function _getRevisionIdJSON(pagename) {
         var api = 'https://minecraft.gamepedia.com/api.php';
-        return $.getJSON( api, {
-            origin: '*',
-            action: 'query',
-            format: 'json',
-            prop: 'revisions',
+
+        return $.getJSON(api, {
+            origin      : '*',
+            action      : 'query',
+            format      : 'json',
+            prop        : 'revisions',
             indexpageids: '1',
-            titles: pagename,
-            rvprop: 'ids'
-        } )
-                .then( function( data ) {
-                    var articleID = data.query.pageids[ 0 ];
-                    if ( articleID === '-1' ) {
+            titles      : pagename,
+            rvprop      : 'ids'
+        })
+                .then(function (data) {
+                    var articleID = data.query.pageids[0];
+                    if (articleID === '-1') {
                         // Show error message w/ animation
-                        $rlg.find( '.rlg-error' ).addClass( clsActive );
-                        setTimeout( function() {
-                            $rlg.find( '.rlg-error' ).removeClass( clsActive );
-                        }, 3000 );
+                        $rlg.find('.rlg-error').addClass(clsActive);
+                        setTimeout(function () {
+                            $rlg.find('.rlg-error').removeClass(clsActive);
+                        }, 3000);
                         return;
                     }
 
-                    var revisionID = data.query.pages[ articleID ].revisions[ 0 ].revid;
-                    $rlg.find( 'input[name="revisionID"]' ).val( revisionID );
-                } );
+                    var revisionID = data.query.pages[articleID].revisions[0].revid;
+                    $rlg.find('input[name="revisionID"]').val(revisionID);
+                });
     }
-} );
+});
