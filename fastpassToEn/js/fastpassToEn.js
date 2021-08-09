@@ -10,11 +10,12 @@ $(function () {
     // Only run on pages that pagename is only alphanumeric characters
     if (!/^[\x01-\x7E]+$/.test(title) && !specialPagename) return;
 
+    var encodedTitle   = encodeURIComponent(title);
     var resultPagename = uploadAutoFill === false && /^[\x01-\x7E]+$/.test(filledFilename)
-                         ? 'File:' + filledFilename
-                         : specialPagename
-                           ? namespace + ':' + specialPagename
-                           : (namespace ? namespace + ':' : '') + title;
+        ? 'File:' + filledFilename
+        : specialPagename
+            ? namespace + ':' + specialPagename
+            : (namespace ? namespace + ':' : '') + encodedTitle;
 
     var html = genLinkHtml(resultPagename, '対応する英語版ページに移動', '英語版');
 
@@ -31,7 +32,9 @@ $(function () {
         var paramsPos = urlParamas.indexOf('&');
         var params    = urlParamas.slice(paramsPos);
 
-        if (paramsPos !== -1) {
+        if (paramsPos === -1) {
+            return;
+        } else {
             return params;
         }
     }
@@ -40,7 +43,7 @@ $(function () {
         return [
             '<li id="ca-englishlink">',
             '<span>',
-            '<a href="//minecraft.gamepedia.com/' + pagename + '" title="' + title + '">',
+            '<a href="//minecraft.fandom.com/' + pagename + '" title="' + title + '">',
             label,
             '</a>',
             '</span>',
